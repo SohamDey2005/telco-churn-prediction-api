@@ -1,0 +1,567 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Telco Customer Churn Prediction API",
+    "description": "Secure real-time and batch churn scoring service. Pipeline bundles cleaning, encoding, scaling and a tuned classifier. Decision threshold selected by expected cost of FN vs FP.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict": {
+      "post": {
+        "tags": [
+          "prediction"
+        ],
+        "summary": "Predict",
+        "description": "Score one or more customers.\nUnseen categories are handled gracefully by the OneHotEncoder (handle_unknown='ignore').",
+        "operationId": "predict_predict_post",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/single": {
+      "post": {
+        "tags": [
+          "prediction"
+        ],
+        "summary": "Predict Single",
+        "description": "Convenience endpoint for a single record.",
+        "operationId": "predict_single_predict_single_post",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerFeatures"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SinglePrediction"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/drift": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Drift Check",
+        "description": "Basic population stability index (PSI) drift check.\nCompares recent batch of inputs against a sample of the training numeric distributions\nstored at training time. Flags features with PSI > 0.2 (common rule of thumb).\nNote: for production you would persist full training histograms; here we recompute\na lightweight approximation from the loaded pipeline metadata and the incoming batch.",
+        "operationId": "drift_check_drift_post",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriftResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchPredictionResponse": {
+        "properties": {
+          "predictions": {
+            "items": {
+              "$ref": "#/components/schemas/SinglePrediction"
+            },
+            "type": "array",
+            "title": "Predictions"
+          },
+          "model_data_hash": {
+            "type": "string",
+            "title": "Model Data Hash"
+          },
+          "model_trained_at": {
+            "type": "string",
+            "title": "Model Trained At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "predictions",
+          "model_data_hash",
+          "model_trained_at"
+        ],
+        "title": "BatchPredictionResponse"
+      },
+      "CustomerFeatures": {
+        "properties": {
+          "gender": {
+            "type": "string",
+            "title": "Gender",
+            "examples": [
+              "Female"
+            ]
+          },
+          "SeniorCitizen": {
+            "type": "string",
+            "title": "Seniorcitizen",
+            "examples": [
+              "0"
+            ]
+          },
+          "Partner": {
+            "type": "string",
+            "title": "Partner",
+            "examples": [
+              "Yes"
+            ]
+          },
+          "Dependents": {
+            "type": "string",
+            "title": "Dependents",
+            "examples": [
+              "No"
+            ]
+          },
+          "tenure": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tenure",
+            "examples": [
+              12
+            ]
+          },
+          "PhoneService": {
+            "type": "string",
+            "title": "Phoneservice",
+            "examples": [
+              "Yes"
+            ]
+          },
+          "MultipleLines": {
+            "type": "string",
+            "title": "Multiplelines",
+            "examples": [
+              "No"
+            ]
+          },
+          "InternetService": {
+            "type": "string",
+            "title": "Internetservice",
+            "examples": [
+              "DSL"
+            ]
+          },
+          "OnlineSecurity": {
+            "type": "string",
+            "title": "Onlinesecurity",
+            "examples": [
+              "No"
+            ]
+          },
+          "OnlineBackup": {
+            "type": "string",
+            "title": "Onlinebackup",
+            "examples": [
+              "Yes"
+            ]
+          },
+          "DeviceProtection": {
+            "type": "string",
+            "title": "Deviceprotection",
+            "examples": [
+              "No"
+            ]
+          },
+          "TechSupport": {
+            "type": "string",
+            "title": "Techsupport",
+            "examples": [
+              "No"
+            ]
+          },
+          "StreamingTV": {
+            "type": "string",
+            "title": "Streamingtv",
+            "examples": [
+              "No"
+            ]
+          },
+          "StreamingMovies": {
+            "type": "string",
+            "title": "Streamingmovies",
+            "examples": [
+              "No"
+            ]
+          },
+          "Contract": {
+            "type": "string",
+            "title": "Contract",
+            "examples": [
+              "Month-to-month"
+            ]
+          },
+          "PaperlessBilling": {
+            "type": "string",
+            "title": "Paperlessbilling",
+            "examples": [
+              "Yes"
+            ]
+          },
+          "PaymentMethod": {
+            "type": "string",
+            "title": "Paymentmethod",
+            "examples": [
+              "Electronic check"
+            ]
+          },
+          "MonthlyCharges": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Monthlycharges",
+            "examples": [
+              70.35
+            ]
+          },
+          "TotalCharges": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Totalcharges",
+            "examples": [
+              845.0
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "gender",
+          "SeniorCitizen",
+          "Partner",
+          "Dependents",
+          "tenure",
+          "PhoneService",
+          "MultipleLines",
+          "InternetService",
+          "OnlineSecurity",
+          "OnlineBackup",
+          "DeviceProtection",
+          "TechSupport",
+          "StreamingTV",
+          "StreamingMovies",
+          "Contract",
+          "PaperlessBilling",
+          "PaymentMethod",
+          "MonthlyCharges",
+          "TotalCharges"
+        ],
+        "title": "CustomerFeatures"
+      },
+      "DriftFeature": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "psi": {
+            "type": "number",
+            "title": "Psi"
+          },
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "psi",
+          "flagged"
+        ],
+        "title": "DriftFeature"
+      },
+      "DriftResponse": {
+        "properties": {
+          "overall_flag": {
+            "type": "boolean",
+            "title": "Overall Flag"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/DriftFeature"
+            },
+            "type": "array",
+            "title": "Features"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overall_flag",
+          "features",
+          "message"
+        ],
+        "title": "DriftResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "model_loaded": {
+            "type": "boolean",
+            "title": "Model Loaded"
+          },
+          "data_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Hash"
+          },
+          "trained_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trained At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "model_loaded"
+        ],
+        "title": "HealthResponse"
+      },
+      "PredictionRequest": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerFeatures"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "records"
+        ],
+        "title": "PredictionRequest"
+      },
+      "SinglePrediction": {
+        "properties": {
+          "churn_probability": {
+            "type": "number",
+            "title": "Churn Probability"
+          },
+          "churn_prediction": {
+            "type": "integer",
+            "title": "Churn Prediction"
+          },
+          "threshold_used": {
+            "type": "number",
+            "title": "Threshold Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "churn_probability",
+          "churn_prediction",
+          "threshold_used"
+        ],
+        "title": "SinglePrediction"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "data_hash": "1df8a4975f519c15",
+  "metrics": {
+    "roc_auc": 0.8340162343208867,
+    "threshold": 0.26999999999999996,
+    "expected_cost": 631.0,
+    "precision": 0.416969696969697,
+    "recall": 0.9197860962566845,
+    "f1": 0.5738115095913261,
+    "support": 374,
+    "confusion_matrix": [
+      [
+        552,
+        481
+      ],
+      [
+        30,
+        344
+      ]
+    ],
+    "best_params": "{'classifier': RandomForestClassifier(class_weight='balanced', max_depth=8, n_estimators=150,\n                       n_jobs=-1, random_state=42)}"
+  },
+  "versions": {
+    "python": "3.10",
+    "scikit-learn": "1.7.2",
+    "pandas": "2.3.3",
+    "numpy": "2.2.6",
+    "joblib": "1.6.0"
+  },
+  "trained_at": "2026-11-06T05:50:31.639179+00:00",
+  "threshold": 0.26999999999999996
+}

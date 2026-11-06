@@ -133,7 +133,3 @@ churn-pipeline/
 ├── requirements.txt
 └── README.md
 ```
-
-## Licence
-
-This project is supplied for educational / portfolio purposes. The underlying Telco dataset is publicly available under its original terms.
